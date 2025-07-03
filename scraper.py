@@ -1,7 +1,7 @@
 """
 Amazon Product Scraper
 
-This script scrapes basic product information (title and price) from Amazon product pages
+This script scrapes basic product information from Amazon product pages
 using Beautiful Soup and requests. It mimics a browser request to avoid being blocked.
 """
 
@@ -51,9 +51,20 @@ def get_product_details(product_url: str) -> dict:
         # Clean up the price string by extracting only the part after the first '$' symbol
         price = '$' + extracted_price.split('$')[1]
 
+        # Scrape the rating from the span element within the star icon
+        rating_element = soup.find('i', attrs={'class': lambda x: x and 'a-icon-star' in x})
+        rating = None
+        if rating_element:
+            rating_span = rating_element.find('span', attrs={'class': 'a-icon-alt'})
+            if rating_span:
+                rating_text = rating_span.get_text().strip()
+                # Extract the numeric rating (e.g., "4.4" from "4.4 out of 5 stars")
+                rating = rating_text.split(' ')[0]
+
         # Store the scraped data in the product details dictionary
         product_details['title'] = title
         product_details['price'] = price
+        product_details['rating'] = rating
 
         # Return the populated product details dictionary
         return product_details
@@ -129,6 +140,13 @@ if __name__ == "__main__":
         print("=" * 40)
         print(f"📝 Title: {product_details['title']}")
         print(f"💰 Price: {product_details['price']}")
+        
+        # Display rating
+        if product_details['rating']:
+            print(f"⭐ Rating: {product_details['rating']}/5")
+        else:
+            print("⭐ Rating: Not available")
+            
         print("=" * 40)
     else:
         print("❌ Failed to fetch product details. Please check the URL and try again.")
