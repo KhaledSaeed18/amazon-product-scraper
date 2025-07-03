@@ -61,10 +61,19 @@ def get_product_details(product_url: str) -> dict:
                 # Extract the numeric rating (e.g., "4.4" from "4.4 out of 5 stars")
                 rating = rating_text.split(' ')[0]
 
+        # Scrape the number of ratings
+        num_ratings = None
+        ratings_element = soup.find('span', attrs={'id': 'acrCustomerReviewText'})
+        if ratings_element:
+            ratings_text = ratings_element.get_text().strip()
+            # Extract the number from text like "576 ratings" or "576 Reviews"
+            num_ratings = ratings_text.split(' ')[0]
+
         # Store the scraped data in the product details dictionary
         product_details['title'] = title
         product_details['price'] = price
         product_details['rating'] = rating
+        product_details['num_ratings'] = num_ratings
 
         # Return the populated product details dictionary
         return product_details
@@ -143,7 +152,10 @@ if __name__ == "__main__":
         
         # Display rating
         if product_details['rating']:
-            print(f"⭐ Rating: {product_details['rating']}/5")
+            rating_display = f"⭐ Rating: {product_details['rating']}/5"
+            if product_details['num_ratings']:
+                rating_display += f" ({product_details['num_ratings']} ratings)"
+            print(rating_display)
         else:
             print("⭐ Rating: Not available")
             
