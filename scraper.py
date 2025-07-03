@@ -11,6 +11,8 @@ import time
 import threading
 import sys
 import re
+import json
+from datetime import datetime
 from urllib.parse import urlparse
 
 # HTTP headers to mimic a real browser request and avoid getting blocked by Amazon
@@ -291,7 +293,8 @@ def display_configuration_menu() -> int:
     
     while True:
         try:
-            choice = input("Select option (1 or 2): ").strip()
+            choice = input("Select option (1 or 2): ")
+
             if choice in ['1', '2']:
                 return int(choice)
             else:
@@ -364,6 +367,11 @@ def display_single_product(product_details: dict, url: str) -> None:
             print("📋 About this item: Not available")
             
         print("=" * 40)
+        
+        # Ask user if they want to save to JSON
+        if ask_save_to_json():
+            json_data = prepare_single_product_json(product_details, url)
+            generate_json_file(json_data)
     else:
         print("❌ Failed to fetch product details. Please check the URL and try again.")
 
@@ -439,6 +447,11 @@ def display_multiple_products(all_products: list) -> None:
         print()
     
     print("=" * 50)
+    
+    # Ask user if they want to save to JSON (only if there are successful scrapes)
+    if successful_scrapes and ask_save_to_json():
+        json_data = prepare_multiple_products_json(all_products)
+        generate_json_file(json_data)
 
 
 def scrape_single_product() -> None:
@@ -507,6 +520,117 @@ def scrape_multiple_products() -> None:
     
     # Display all results
     display_multiple_products(all_products)
+
+
+def ask_save_to_json() -> bool:
+    """
+    Ask user if they want to save scraped data to a JSON file.
+    
+    Returns:
+        bool: True if user wants to save, False otherwise
+    """
+    print("\n💾 Save scraped data to JSON file?")
+    while True:
+        choice = input("Would you like to save the scraped data to a JSON file? (y/n): ").strip().lower()
+        if choice in ['y', 'yes']:
+            return True
+        elif choice in ['n', 'no']:
+            return False
+        else:
+            print("❌ Please enter 'y' for yes or 'n' for no.")
+
+
+def generate_json_file(data: dict, filename: str = None) -> str:
+    """
+    Generate a JSON file with scraped product data.
+    
+    Args:
+        data (dict): The scraped data to save
+        filename (str): Optional custom filename
+        
+    Returns:
+        str: The filename of the generated JSON file
+    """
+    if filename is None:
+        # Generate timestamp-based filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"amazon_products_{timestamp}.json"
+    
+    try:
+        # Ensure filename has .json extension
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        # Write data to JSON file with pretty formatting
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Data successfully saved to: {filename}")
+        return filename
+        
+    except Exception as e:
+        print(f"❌ Error saving JSON file: {e}")
+        return None
+
+
+def prepare_single_product_json(product_details: dict, url: str) -> dict:
+    """
+    Prepare single product data for JSON export.
+    
+    Args:
+        product_details (dict): Product details dictionary
+        url (str): Product URL
+        
+    Returns:
+        dict: Formatted data for JSON export
+    """
+    return {
+        "scraping_info": {
+            "timestamp": datetime.now().isoformat(),
+            "mode": "single_product",
+            "total_products": 1,
+            "successful_scrapes": 1 if product_details else 0
+        },
+        "products": [
+            {
+                "url": url,
+                "scraped_successfully": product_details is not None,
+                "product_data": product_details if product_details else {}
+            }
+        ]
+    }
+
+
+def prepare_multiple_products_json(all_products: list) -> dict:
+    """
+    Prepare multiple products data for JSON export.
+    
+    Args:
+        all_products (list): List of tuples containing (url, product_details)
+        
+    Returns:
+        dict: Formatted data for JSON export
+    """
+    successful_scrapes = [p for p in all_products if p[1] is not None]
+    
+    products_data = []
+    for url, product_details in all_products:
+        products_data.append({
+            "url": url,
+            "scraped_successfully": product_details is not None,
+            "product_data": product_details if product_details else {}
+        })
+    
+    return {
+        "scraping_info": {
+            "timestamp": datetime.now().isoformat(),
+            "mode": "multiple_products",
+            "total_products": len(all_products),
+            "successful_scrapes": len(successful_scrapes),
+            "failed_scrapes": len(all_products) - len(successful_scrapes)
+        },
+        "products": products_data
+    }
 
 
 # Main execution section
