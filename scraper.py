@@ -131,30 +131,33 @@ def get_product_details(product_url: str) -> dict:
         return None
 
 
-def spinner_animation(stop_event):
+def spinner_animation(stop_event, message="Fetching product details..."):
     """
     Display a spinning animation while loading.
     
     Args:
         stop_event: Threading event to stop the spinner
+        message: Custom loading message to display
     """
     spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
     i = 0
     while not stop_event.is_set():
-        sys.stdout.write(f'\r{spinner_chars[i]} Fetching product details...')
+        sys.stdout.write(f'\r{spinner_chars[i]} {message}')
         sys.stdout.flush()
         i = (i + 1) % len(spinner_chars)
         time.sleep(0.1)
-    sys.stdout.write('\r' + ' ' * 50 + '\r')  # Clear the line
+    sys.stdout.write('\r' + ' ' * (len(message) + 10) + '\r')  # Clear the line
     sys.stdout.flush()
 
 
-def get_product_details_with_loading(product_url: str) -> dict:
+def get_product_details_with_loading(product_url: str, product_index: int = None, total_products: int = None) -> dict:
     """
     Wrapper function to scrape product details with loading animation.
     
     Args:
         product_url (str): The URL of the Amazon product page to scrape
+        product_index (int): Current product index (for multiple products)
+        total_products (int): Total number of products (for multiple products)
         
     Returns:
         dict: A dictionary containing 'title' and 'price' keys with scraped values, or None if scraping fails
@@ -162,8 +165,14 @@ def get_product_details_with_loading(product_url: str) -> dict:
     # Create a stop event for the spinner
     stop_event = threading.Event()
     
+    # Customize loading message based on whether we're processing multiple products
+    if product_index is not None and total_products is not None:
+        loading_message = f"Fetching product {product_index}/{total_products}..."
+    else:
+        loading_message = "Fetching product details..."
+    
     # Start the spinner in a separate thread
-    spinner_thread = threading.Thread(target=spinner_animation, args=(stop_event,))
+    spinner_thread = threading.Thread(target=spinner_animation, args=(stop_event, loading_message))
     spinner_thread.start()
     
     try:
@@ -232,32 +241,73 @@ def validate_amazon_url(url: str) -> bool:
         return False
 
 
-# Main execution section
-if __name__ == "__main__":
-    print("🛒 Amazon Product Scraper")
-    print("=" * 30)
+def get_multiple_urls() -> list:
+    """
+    Get multiple product URLs from user input.
     
-    # Get the Amazon product URL from user input
-    product_url = input('Enter product url: ').strip()
+    Returns:
+        list: List of validated Amazon product URLs
+    """
+    urls = []
+    print("📝 Enter Amazon product URLs (press Enter twice when done):")
+    print("   💡 Tip: You can paste one URL per line")
+    print()
     
-    # Validate the URL before proceeding
-    if not product_url:
-        print("❌ Error: Please enter a valid URL.")
-        sys.exit(1)
+    url_count = 1
+    while True:
+        url = input(f"URL {url_count}: ").strip()
+        
+        if not url:  # Empty input
+            if urls:  # If we have at least one URL, break
+                break
+            else:  # If no URLs entered yet, continue asking
+                print("   ⚠️  Please enter at least one URL.")
+                continue
+        
+        if validate_amazon_url(url):
+            urls.append(url)
+            print(f"   ✅ URL {url_count} added successfully!")
+            url_count += 1
+        else:
+            print("   ❌ Invalid Amazon URL. Please try again.")
     
-    if not validate_amazon_url(product_url):
-        print("❌ Error: Please enter a valid Amazon product URL.")
-        print("   Valid Amazon product URLs should:")
-        print("   • Be from an Amazon domain (amazon.com, amazon.co.uk, etc.)")
-        sys.exit(1)
-    
-    print("✅ Valid Amazon URL detected!")
-    print()  # Add some spacing
-    
-    # Call the scraping function with loading animation
-    product_details = get_product_details_with_loading(product_url)
+    return urls
 
-    # Display the scraped product information with nice formatting
+
+def display_configuration_menu() -> int:
+    """
+    Display configuration menu and get user's choice.
+    
+    Returns:
+        int: User's choice (1 for single URL, 2 for multiple URLs)
+    """
+    print("🛒 Amazon Product Scraper - Configuration")
+    print("=" * 45)
+    print()
+    print("📋 Choose scraping mode:")
+    print("   1️⃣  Single Product URL")
+    print("   2️⃣  Multiple Product URLs")
+    print()
+    
+    while True:
+        try:
+            choice = input("Select option (1 or 2): ").strip()
+            if choice in ['1', '2']:
+                return int(choice)
+            else:
+                print("❌ Invalid choice. Please enter 1 or 2.")
+        except ValueError:
+            print("❌ Invalid input. Please enter 1 or 2.")
+
+
+def display_single_product(product_details: dict, url: str) -> None:
+    """
+    Display details for a single product.
+    
+    Args:
+        product_details (dict): Product details dictionary
+        url (str): Product URL
+    """
     if product_details:
         print("✅ Product details fetched successfully!")
         print("=" * 40)
@@ -286,6 +336,9 @@ if __name__ == "__main__":
         else:
             print("🖼️  Image: Not available")
             
+        # Display product URL
+        print(f"🔗 URL: {url}")
+            
         # Display "About this item" bullet points
         if product_details['about_item']:
             print(f"📋 About this item:")
@@ -313,3 +366,160 @@ if __name__ == "__main__":
         print("=" * 40)
     else:
         print("❌ Failed to fetch product details. Please check the URL and try again.")
+
+
+def display_multiple_products(all_products: list) -> None:
+    """
+    Display details for multiple products in a summary format.
+    
+    Args:
+        all_products (list): List of tuples containing (url, product_details)
+    """
+    successful_scrapes = [p for p in all_products if p[1] is not None]
+    failed_scrapes = [p for p in all_products if p[1] is None]
+    
+    print("\n" + "=" * 50)
+    print(f"🎯 SCRAPING SUMMARY")
+    print("=" * 50)
+    print(f"✅ Successfully scraped: {len(successful_scrapes)}/{len(all_products)} products")
+    if failed_scrapes:
+        print(f"❌ Failed to scrape: {len(failed_scrapes)} products")
+    print()
+    
+    # Display successful scrapes
+    for i, (url, product_details) in enumerate(successful_scrapes, 1):
+        print(f"📦 PRODUCT {i}")
+        print("-" * 20)
+        print(f"📝 Title: {product_details['title']}")
+        print(f"💰 Price: {product_details['price']}")
+        
+        if product_details['rating']:
+            rating_display = f"⭐ Rating: {product_details['rating']}/5"
+            if product_details['num_ratings']:
+                rating_display += f" ({product_details['num_ratings']} ratings)"
+            print(rating_display)
+        
+        if product_details['breadcrumbs']:
+            breadcrumb_path = " › ".join(product_details['breadcrumbs'])
+            print(f"📂 Category: {breadcrumb_path}")
+        
+        print(f"🔗 URL: {url}")
+        
+        # Display "About this item" bullet points
+        if product_details['about_item']:
+            print(f"📋 About this item:")
+            for j, bullet in enumerate(product_details['about_item'], 1):
+                # Wrap long text for better readability (max 80 characters per line)
+                wrapped_text = []
+                words = bullet.split(' ')
+                current_line = f"   {j}. "
+                
+                for word in words:
+                    if len(current_line + word) <= 80:
+                        current_line += word + " "
+                    else:
+                        wrapped_text.append(current_line.rstrip())
+                        current_line = "      " + word + " "  # Indent continuation lines
+                
+                if current_line.strip():
+                    wrapped_text.append(current_line.rstrip())
+                
+                print('\n'.join(wrapped_text))
+        else:
+            print("📋 About this item: Not available")
+        
+        print()
+    
+    # Display failed scrapes
+    if failed_scrapes:
+        print("❌ FAILED SCRAPES")
+        print("-" * 20)
+        for i, (url, _) in enumerate(failed_scrapes, 1):
+            print(f"{i}. {url}")
+        print()
+    
+    print("=" * 50)
+
+
+def scrape_single_product() -> None:
+    """Handle single product scraping workflow."""
+    print("\n🔍 Single Product Mode")
+    print("=" * 25)
+    
+    # Get the Amazon product URL from user input
+    product_url = input('Enter product URL: ').strip()
+    
+    # Validate the URL before proceeding
+    if not product_url:
+        print("❌ Error: Please enter a valid URL.")
+        return
+    
+    if not validate_amazon_url(product_url):
+        print("❌ Error: Please enter a valid Amazon product URL.")
+        print("   Valid Amazon product URLs should:")
+        print("   • Be from an Amazon domain (amazon.com, amazon.co.uk, etc.)")
+        return
+    
+    print("✅ Valid Amazon URL detected!")
+    print()  # Add some spacing
+    
+    # Call the scraping function with loading animation
+    product_details = get_product_details_with_loading(product_url)
+    
+    # Display the scraped product information
+    display_single_product(product_details, product_url)
+
+
+def scrape_multiple_products() -> None:
+    """Handle multiple products scraping workflow."""
+    print("\n🔍 Multiple Products Mode")
+    print("=" * 28)
+    
+    # Get multiple URLs from user
+    urls = get_multiple_urls()
+    
+    if not urls:
+        print("❌ No valid URLs provided.")
+        return
+    
+    print(f"\n✅ Ready to scrape {len(urls)} product(s)!")
+    print("🚀 Starting scraping process...\n")
+    
+    all_products = []
+    
+    # Scrape each product with progress indication
+    for i, url in enumerate(urls, 1):
+        print(f"🔄 Processing product {i}/{len(urls)}...")
+        
+        # Add small delay between requests to be respectful to the server
+        if i > 1:
+            time.sleep(2)
+        
+        product_details = get_product_details_with_loading(url, i, len(urls))
+        all_products.append((url, product_details))
+        
+        # Show quick success/failure indication
+        if product_details:
+            print(f"   ✅ Product {i} scraped successfully!")
+        else:
+            print(f"   ❌ Product {i} failed to scrape.")
+        print()
+    
+    # Display all results
+    display_multiple_products(all_products)
+
+
+# Main execution section
+if __name__ == "__main__":
+    print("🛒 Amazon Product Scraper")
+    print("=" * 30)
+    
+    # Display configuration menu to choose between single or multiple URL scraping
+    mode = display_configuration_menu()
+    
+    if mode == 1:
+        # Single URL mode
+        scrape_single_product()
+    elif mode == 2:
+        # Multiple URLs mode
+        scrape_multiple_products()
