@@ -7,6 +7,9 @@ using Beautiful Soup and requests. It mimics a browser request to avoid being bl
 
 import requests
 from bs4 import BeautifulSoup
+import time
+import threading
+import sys
 
 # HTTP headers to mimic a real browser request and avoid getting blocked by Amazon
 headers = {
@@ -62,13 +65,70 @@ def get_product_details(product_url: str) -> dict:
         return None
 
 
+def spinner_animation(stop_event):
+    """
+    Display a spinning animation while loading.
+    
+    Args:
+        stop_event: Threading event to stop the spinner
+    """
+    spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+    i = 0
+    while not stop_event.is_set():
+        sys.stdout.write(f'\r{spinner_chars[i]} Fetching product details...')
+        sys.stdout.flush()
+        i = (i + 1) % len(spinner_chars)
+        time.sleep(0.1)
+    sys.stdout.write('\r' + ' ' * 50 + '\r')  # Clear the line
+    sys.stdout.flush()
+
+
+def get_product_details_with_loading(product_url: str) -> dict:
+    """
+    Wrapper function to scrape product details with loading animation.
+    
+    Args:
+        product_url (str): The URL of the Amazon product page to scrape
+        
+    Returns:
+        dict: A dictionary containing 'title' and 'price' keys with scraped values, or None if scraping fails
+    """
+    # Create a stop event for the spinner
+    stop_event = threading.Event()
+    
+    # Start the spinner in a separate thread
+    spinner_thread = threading.Thread(target=spinner_animation, args=(stop_event,))
+    spinner_thread.start()
+    
+    try:
+        # Call the original scraping function
+        result = get_product_details(product_url)
+        return result
+    finally:
+        # Stop the spinner
+        stop_event.set()
+        spinner_thread.join()
+
+
 # Main execution section
 if __name__ == "__main__":
+    print("🛒 Amazon Product Scraper")
+    print("=" * 30)
+    
     # Get the Amazon product URL from user input
     product_url = input('Enter product url: ')
     
-    # Call the scraping function to get product details
-    product_details = get_product_details(product_url)
+    print()  # Add some spacing
+    
+    # Call the scraping function with loading animation
+    product_details = get_product_details_with_loading(product_url)
 
-    # Display the scraped product information
-    print(product_details)
+    # Display the scraped product information with nice formatting
+    if product_details:
+        print("✅ Product details fetched successfully!")
+        print("=" * 40)
+        print(f"📝 Title: {product_details['title']}")
+        print(f"💰 Price: {product_details['price']}")
+        print("=" * 40)
+    else:
+        print("❌ Failed to fetch product details. Please check the URL and try again.")
