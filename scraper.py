@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 import time
 import threading
 import sys
+import re
+from urllib.parse import urlparse
 
 # HTTP headers to mimic a real browser request and avoid getting blocked by Amazon
 headers = {
@@ -156,14 +158,82 @@ def get_product_details_with_loading(product_url: str) -> dict:
         spinner_thread.join()
 
 
+def validate_amazon_url(url: str) -> bool:
+    """
+    Validates if the provided URL is a valid Amazon product URL.
+    
+    Args:
+        url (str): The URL to validate
+        
+    Returns:
+        bool: True if valid Amazon product URL, False otherwise
+    """
+    try:
+        # Parse the URL
+        parsed_url = urlparse(url)
+        
+        # Check if the scheme is http or https
+        if parsed_url.scheme not in ['http', 'https']:
+            return False
+        
+        # Check if the domain is Amazon
+        domain = parsed_url.netloc.lower()
+        amazon_domains = [
+            'amazon.com', 'www.amazon.com',
+            'amazon.co.uk', 'www.amazon.co.uk',
+            'amazon.ca', 'www.amazon.ca',
+            'amazon.de', 'www.amazon.de',
+            'amazon.fr', 'www.amazon.fr',
+            'amazon.it', 'www.amazon.it',
+            'amazon.es', 'www.amazon.es',
+            'amazon.in', 'www.amazon.in',
+            'amazon.co.jp', 'www.amazon.co.jp',
+            'amazon.com.au', 'www.amazon.com.au'
+        ]
+        
+        if domain not in amazon_domains:
+            return False
+        
+        # Check if the URL contains product identifiers
+        path = parsed_url.path.lower()
+        
+        # Amazon product URLs typically contain '/dp/' or '/gp/product/' patterns
+        product_patterns = [
+            r'/dp/[a-z0-9]{10}',  # Standard product page pattern
+            r'/gp/product/[a-z0-9]{10}',  # Alternative product page pattern
+            r'/[^/]+/dp/[a-z0-9]{10}',  # Category + product pattern
+        ]
+        
+        for pattern in product_patterns:
+            if re.search(pattern, path):
+                return True
+        
+        return False
+        
+    except Exception:
+        return False
+
+
 # Main execution section
 if __name__ == "__main__":
     print("🛒 Amazon Product Scraper")
     print("=" * 30)
     
     # Get the Amazon product URL from user input
-    product_url = input('Enter product url: ')
+    product_url = input('Enter product url: ').strip()
     
+    # Validate the URL before proceeding
+    if not product_url:
+        print("❌ Error: Please enter a valid URL.")
+        sys.exit(1)
+    
+    if not validate_amazon_url(product_url):
+        print("❌ Error: Please enter a valid Amazon product URL.")
+        print("   Valid Amazon product URLs should:")
+        print("   • Be from an Amazon domain (amazon.com, amazon.co.uk, etc.)")
+        sys.exit(1)
+    
+    print("✅ Valid Amazon URL detected!")
     print()  # Add some spacing
     
     # Call the scraping function with loading animation
