@@ -95,6 +95,23 @@ def get_product_details(product_url: str) -> dict:
                         if bullet_text:  # Only add non-empty bullet points
                             about_item.append(bullet_text)
 
+        # Scrape the breadcrumb navigation for product categorization
+        breadcrumbs = []
+        breadcrumb_div = soup.find('div', attrs={'id': 'wayfinding-breadcrumbs_feature_div'})
+        if breadcrumb_div:
+            breadcrumb_list = breadcrumb_div.find('ul', attrs={'class': 'a-unordered-list'})
+            if breadcrumb_list:
+                # Find all list items that contain links (categories)
+                breadcrumb_items = breadcrumb_list.find_all('li')
+                for item in breadcrumb_items:
+                    # Skip divider elements
+                    if 'a-breadcrumb-divider' not in item.get('class', []):
+                        link = item.find('a', attrs={'class': 'a-link-normal'})
+                        if link:
+                            category_text = link.get_text().strip()
+                            if category_text:
+                                breadcrumbs.append(category_text)
+
         # Store the scraped data in the product details dictionary
         product_details['title'] = title
         product_details['price'] = price
@@ -102,6 +119,7 @@ def get_product_details(product_url: str) -> dict:
         product_details['num_ratings'] = num_ratings
         product_details['image_url'] = image_url
         product_details['about_item'] = about_item
+        product_details['breadcrumbs'] = breadcrumbs
 
         # Return the populated product details dictionary
         return product_details
@@ -245,6 +263,13 @@ if __name__ == "__main__":
         print("=" * 40)
         print(f"📝 Title: {product_details['title']}")
         print(f"💰 Price: {product_details['price']}")
+        
+        # Display breadcrumb categories
+        if product_details['breadcrumbs']:
+            breadcrumb_path = " › ".join(product_details['breadcrumbs'])
+            print(f"📂 Category: {breadcrumb_path}")
+        else:
+            print("📂 Category: Not available")
         
         # Display rating
         if product_details['rating']:
