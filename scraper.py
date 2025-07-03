@@ -79,12 +79,27 @@ def get_product_details(product_url: str) -> dict:
             if not image_url:
                 image_url = image_element.get('src')
 
+        # Scrape the "About this item" bullet points
+        about_item = []
+        feature_bullets = soup.find('div', attrs={'id': 'feature-bullets'})
+        if feature_bullets:
+            bullet_list = feature_bullets.find('ul', attrs={'class': 'a-unordered-list'})
+            if bullet_list:
+                bullets = bullet_list.find_all('li')
+                for bullet in bullets:
+                    span = bullet.find('span', attrs={'class': 'a-list-item'})
+                    if span:
+                        bullet_text = span.get_text().strip()
+                        if bullet_text:  # Only add non-empty bullet points
+                            about_item.append(bullet_text)
+
         # Store the scraped data in the product details dictionary
         product_details['title'] = title
         product_details['price'] = price
         product_details['rating'] = rating
         product_details['num_ratings'] = num_ratings
         product_details['image_url'] = image_url
+        product_details['about_item'] = about_item
 
         # Return the populated product details dictionary
         return product_details
@@ -175,6 +190,30 @@ if __name__ == "__main__":
             print(f"🖼️  Image: {product_details['image_url']}")
         else:
             print("🖼️  Image: Not available")
+            
+        # Display "About this item" bullet points
+        if product_details['about_item']:
+            print(f"📋 About this item:")
+            for i, bullet in enumerate(product_details['about_item'], 1):
+                # Wrap long text for better readability (max 80 characters per line)
+                wrapped_text = []
+                words = bullet.split(' ')
+                current_line = f"   {i}. "
+                
+                for word in words:
+                    if len(current_line + word) <= 80:
+                        current_line += word + " "
+                    else:
+                        wrapped_text.append(current_line.rstrip())
+                        current_line = "      " + word + " "  # Indent continuation lines
+                
+                if current_line.strip():
+                    wrapped_text.append(current_line.rstrip())
+                
+                print('\n'.join(wrapped_text))
+                print()  # Add spacing between bullet points
+        else:
+            print("📋 About this item: Not available")
             
         print("=" * 40)
     else:
