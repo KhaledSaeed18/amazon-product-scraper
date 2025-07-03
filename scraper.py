@@ -69,11 +69,22 @@ def get_product_details(product_url: str) -> dict:
             # Extract the number from text like "576 ratings" or "576 Reviews"
             num_ratings = ratings_text.split(' ')[0]
 
+        # Scrape the main product image
+        image_url = None
+        image_element = soup.find('img', attrs={'id': 'landingImage'})
+        if image_element:
+            # Try to get the high-resolution image from data-old-hires attribute first
+            image_url = image_element.get('data-old-hires')
+            # If not available, fall back to the src attribute
+            if not image_url:
+                image_url = image_element.get('src')
+
         # Store the scraped data in the product details dictionary
         product_details['title'] = title
         product_details['price'] = price
         product_details['rating'] = rating
         product_details['num_ratings'] = num_ratings
+        product_details['image_url'] = image_url
 
         # Return the populated product details dictionary
         return product_details
@@ -158,6 +169,12 @@ if __name__ == "__main__":
             print(rating_display)
         else:
             print("⭐ Rating: Not available")
+            
+        # Display image URL
+        if product_details['image_url']:
+            print(f"🖼️  Image: {product_details['image_url']}")
+        else:
+            print("🖼️  Image: Not available")
             
         print("=" * 40)
     else:
