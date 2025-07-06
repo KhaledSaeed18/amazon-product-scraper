@@ -1,6 +1,20 @@
 # 🛒 Amazon Product Scraper
 
+[![Python](https://img.shields.io/badge/Python-3.10.7-blue.svg)](https://www.python.org/downloads/)
+[![Dependencies](https://img.shields.io/badge/Dependencies-requests%20%7C%20beautifulsoup4%20%7C%20lxml-orange.svg)](requirements.txt)
+
 A comprehensive Python web scraper that extracts detailed product information from Amazon product pages using Beautiful Soup and requests. This tool mimics browser behavior to avoid being blocked and provides an intuitive command-line interface for scraping single or multiple products.
+
+## 📋 Table of Contents
+
+- [✨ Features](#-features)
+- [🌐 Supported Domains](#-supported-amazon-domains)
+- [📋 Requirements](#-requirements)
+- [🚀 Installation](#-installation)
+- [🎮 Usage](#-usage)
+- [📊 Sample Output](#-sample-output)
+- [💾 JSON Export](#-json-export-format)
+- [🔧 Technical Details](#-technical-details)
 
 ## ✨ Features
 
@@ -29,56 +43,85 @@ A comprehensive Python web scraper that extracts detailed product information fr
 
 ### 🌐 Supported Amazon Domains
 
-- amazon.com (United States)
-- amazon.co.uk (United Kingdom)
-- amazon.ca (Canada)
-- amazon.de (Germany)
-- amazon.fr (France)
-- amazon.it (Italy)
-- amazon.es (Spain)
-- amazon.in (India)
-- amazon.co.jp (Japan)
-- amazon.com.au (Australia)
+| Country | Domain | Status |
+|---------|--------|--------|
+| United States | amazon.com | ✅ |
+| United Kingdom | amazon.co.uk | ✅ |
+| Canada | amazon.ca | ✅ |
+| Germany | amazon.de | ✅ |
+| France | amazon.fr | ✅ |
+| Italy | amazon.it | ✅ |
+| Spain | amazon.es | ✅ |
+| India | amazon.in | ✅ |
+| Japan | amazon.co.jp | ✅ |
+| Australia | amazon.com.au | ✅ |
 
 ## 📋 Requirements
 
-- Python 3.7+
-- Internet connection
-- Dependencies listed in `requirements.txt`
+- **Python**: 3.7 or higher
+- **Internet Connection**: Required for web scraping
+- **Dependencies**: Listed in `requirements.txt`
 
 ## 🚀 Installation
 
-### 1. Clone or Download the Project
+### Method 1: Quick Setup
 
 ```bash
+# Clone the repository
 git clone https://github.com/KhaledSaeed18/amazon-product-scraper.git
 cd amazon-product-scraper
-```
 
-### 2. Create Virtual Environment
-
-```bash
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv venv
-
-# Activate it
 
 # Windows
 venv\Scripts\activate
 
 # Mac/Linux
 source venv/bin/activate
-```
 
-### 3. Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
+### Method 2: Manual Setup
+
+1. **Download the Project**
+
+   ```bash
+   # Download as ZIP or clone
+   git clone https://github.com/KhaledSaeed18/amazon-product-scraper.git
+   ```
+
+2. **Create Virtual Environment**
+
+   ```bash
+   cd amazon-product-scraper
+   python -m venv venv
+   ```
+
+3. **Activate Virtual Environment**
+
+   ```bash
+   # Windows Command Prompt
+   venv\Scripts\activate.bat
+   
+   # Windows PowerShell
+   venv\Scripts\Activate.ps1
+   
+   # Mac/Linux
+   source venv/bin/activate
+   ```
+
+4. **Install Dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 ## 🎮 Usage
 
-### Running the Scraper
+### Quick Start
 
 ```bash
 python scraper.py
@@ -88,7 +131,7 @@ python scraper.py
 
 The scraper presents an interactive menu with two options:
 
-```
+```bash
 🛒 Amazon Product Scraper - Configuration
 =============================================
 
@@ -107,12 +150,13 @@ Select option (1 or 2):
 4. View the detailed product information
 5. Optionally save results to JSON file
 
-**Example URL formats:**
+**Supported URL formats:**
 
-```
+```bash
 https://www.amazon.com/dp/B08N5WRWNW
 https://amazon.co.uk/gp/product/B08N5WRWNW
 https://www.amazon.de/dp/B08N5WRWNW
+https://amazon.com/Some-Product-Name/dp/B08N5WRWNW
 ```
 
 ### Multiple Products Mode
@@ -124,11 +168,17 @@ https://www.amazon.de/dp/B08N5WRWNW
 5. View comprehensive summary of all products
 6. Optionally save all results to JSON file
 
+**Tips for Multiple Products:**
+
+- Add 2-3 second delays between requests (built-in)
+- Maximum recommended: 50 products per session
+- URLs are validated before processing
+
 ## 📊 Sample Output
 
 ### Single Product Output
 
-```
+```bash
 ✅ Product details fetched successfully!
 ========================================
 📝 Title: Echo Dot (4th Gen) | Smart speaker with Alexa | Charcoal
@@ -150,7 +200,7 @@ https://www.amazon.de/dp/B08N5WRWNW
 
 ### Multiple Products Summary
 
-```
+```bash
 ==================================================
 🎯 SCRAPING SUMMARY
 ==================================================
@@ -221,12 +271,16 @@ When saving data to JSON, the file includes comprehensive metadata:
 
 The scraper extracts the following information:
 
-- **Product Title**: From `span#productTitle`
-- **Price**: From `span.a-price`
-- **Rating**: From `i.a-icon-star` elements
-- **Review Count**: From `span#acrCustomerReviewText`
-- **Product Image**: From `img#landingImage` (high-res when available)
-- **Categories**: From breadcrumb navigation
-- **Features**: From "About this item" bullet points
+| Data Point | CSS Selector/Method | Fallback |
+|------------|---------------------|----------|
+| Product Title | `span#productTitle` | N/A |
+| Price | `span.a-price` | "Not available" |
+| Rating | `i.a-icon-star` elements | "Not available" |
+| Review Count | `span#acrCustomerReviewText` | "Not available" |
+| Product Image | `img#landingImage` | "Not available" |
+| Categories | Breadcrumb navigation | Empty array |
+| Features | "About this item" bullets | Empty array |
+
+---
 
 **Happy Scraping! 🚀**
